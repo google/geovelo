@@ -25,7 +25,7 @@ geovelo = geovelo || {};
 
 (function() {
 
-// Computational contstants.
+// Computational constants.
 var DEG_TO_RAD = Math.PI / 180;
 var ZOOM_FACTOR = 128 / Math.PI;
 var PI_OVER_FOUR = Math.PI / 4;

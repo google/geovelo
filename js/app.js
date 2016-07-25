@@ -47,6 +47,12 @@ geovelo.Visualization = function(containerElement) {
   timeRange.domElement.style.display = 'none';
   timeRange.domElement.className = 'time-range';
 
+  // Set the default range colors.
+  overlay.setStartColor(controls.state.style.startColor);
+  overlay.setEndColor(controls.state.style.endColor);
+  timeRange.setStartColor(controls.state.style.startColor);
+  timeRange.setEndColor(controls.state.style.endColor);
+
   // Update the Overlay viewport when the map bounds change.
   map.setOverlayElement(overlay.domElement);
   map.onBoundsChanged(overlay.setBounds.bind(overlay));
@@ -60,16 +66,50 @@ geovelo.Visualization = function(containerElement) {
   // Listen for settings and data events from the controls.
   controls.domElement.addEventListener('settings-changed', function(event) {
     var setting = event.detail.folderName + '/' + event.detail.optionName;
-    if (setting === 'data/multiplier') {
-      overlay.setMultiplier(event.detail.value);
-    } else if (setting === 'data/medianCorrection') {
-      overlay.setMedianCorrection(event.detail.value);
+    var value = event.detail.value;
+    switch (setting) {
+      case 'data/multiplier':
+        overlay.setMultiplier(value);
+        break;
+      case 'data/medianCorrection':
+        overlay.setMedianCorrection(value);
+        break;
+      case 'data/showMarkers':
+        map.setMarkerVisibility(value);
+        break;
+      case 'style/startColor':
+        overlay.setStartColor(value);
+        timeRange.setStartColor(value);
+        break;
+      case 'style/endColor':
+        overlay.setEndColor(value);
+        timeRange.setEndColor(value);
+        break;
+      case 'style/lineWidth':
+        overlay.setLineWidth(value);
+        break;
+      case 'animation/enabled':
+        value ? overlay.startAnimation() : overlay.stopAnimation();
+        break;
+      case 'animation/duration':
+        overlay.setAnimationDuration(value);
+        break;
+      case 'animation/delay':
+        overlay.setAnimationDelay(value);
+        break;
+      case 'animation/showStats':
+        value ? overlay.showStats() : overlay.hideStats();
+        break;
+      default:
+        throw Error('Unrecogrized setting: ' + setting);
+        break;
     }
   }, false);
 
   // Listen for data-ready events from the controls element, feed to components
   // that need to know.
   controls.domElement.addEventListener('data-ready', function(event) {
+    map.setData(event.detail);
     overlay.setData(event.detail);
   }, false);
 

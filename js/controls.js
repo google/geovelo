@@ -89,7 +89,12 @@ geovelo.Controls = function(containerElement) {
     Object.keys(folderSettings.options).forEach(function(optionName) {
       var option = folderSettings.options[optionName];
       folderState[optionName] = option.defaultValue;
-      var ctrl = folder.add(folderState, optionName);
+      var ctrl;
+      if (option.type === 'color') {
+        ctrl = folder.addColor(folderState, optionName);
+      } else {
+        ctrl = folder.add(folderState, optionName);
+      }
       if ('min' in option) {
         ctrl = ctrl.min(option.min);
       }

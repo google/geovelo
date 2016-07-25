@@ -16,9 +16,12 @@
  *  limitations under the License.
  */
 
-// Map requires google maps.
+// Map requires Google Maps and d3.
 if (typeof google === 'undefined' || typeof google.maps === 'undefined') {
   throw Error('Google Maps is required but missing.');
+}
+if (typeof d3 === 'undefined') {
+  throw Error('d3 is required but missing.');
 }
 
 var geovelo;
@@ -41,14 +44,20 @@ geovelo.Map = function(containerElement) {
     containerElement.appendChild(this.domElement);
   }
 
+  // Array of Google Maps Markers. Will be created when data arrives.
+  this.markers = null;
+
+  // Whether markers should be visible.
+  this.markerVisibility = false;
+
   // Callback handlers for when the bounds change.
   this.boundsChangedHandlers = [];
 
-  // Initial coordinates.
+  // Initial coordinates. Will center on data once loaded.
   var initial = {
-    zoom: 5,
-    lon: 139.7667,
-    lat: 35.6833
+    zoom: 2,
+    lon: 0,
+    lat: 0,
   };
 
   // Google Map Stylers.
@@ -82,7 +91,7 @@ geovelo.Map = function(containerElement) {
 
   // Create the Google Map
   var map = this.map = new google.maps.Map(this.domElement, {
-    zoom: 5,
+    zoom: initial.zoom,
     center: new google.maps.LatLng(initial.lat, initial.lon),
     mapTypeControl: false,
     mapTypeId: google.maps.MapTypeId.TERRAIN,
@@ -109,6 +118,137 @@ geovelo.Map = function(containerElement) {
   //map.addListener('center_changed', emit);
   map.addListener('zoom_changed', emit);
   map.addListener('idle', emit);
+
+  // D3 selection which will be host to the clicked beacon's info.
+  this.infoContent = d3.select(document.createElement('div')).html(`
+      <h2 class="name"></h2>
+      <p>
+        Start: <span class="start"></span>
+      </p>
+      <p>
+        Lat, Lon: <span class="lat"></span>, <span class="lon"></span>
+      </p>
+  `);
+
+  // Info window to show data about a particular marker. Content is bound to
+  // the infoContent div.
+  this.infoWindow = new google.maps.InfoWindow({
+    content: this.infoContent[0][0]
+  });
+};
+
+/**
+ * New beacon data is available. Set up markers and zoom over there.
+ *
+ * @param {Array} beacons An array of data for the beacons.
+ */
+geovelo.Map.prototype.setData = function(beacons) {
+  // Desired map bounds based on min/max of east/west and south/north.
+  var bounds = {
+    east: -Infinity,
+    west: Infinity,
+    north: -90,
+    south: 90,
+  };
+
+  var markers = [];
+
+  // Create a marker for each beacon.
+  for (var i = 0; i < beacons.length; i++) {
+    var marker = this.createMarker(beacons[i]);
+    markers.push(marker);
+
+    var pos = marker.getPosition();
+    var lat = pos.lat();
+    var lon = pos.lng();
+
+    bounds.east = Math.max(bounds.east, lon);
+    bounds.west = Math.min(bounds.west, lon);
+    bounds.north = Math.max(bounds.north, lat);
+    bounds.south = Math.min(bounds.south, lat);
+  }
+
+  this.map.fitBounds(bounds);
+
+  this.markers = markers;
+};
+
+/**
+ * Helper function for creating a Google Maps marker from a beacon.
+ *
+ * @param {Object} beacon Data object representing a beacon.
+ */
+geovelo.Map.prototype.createMarker = function(beacon) {
+
+  // Keep track of the first, max and min lat and lon values.
+  var lat = null;
+  var lon = null;
+  var minLat = 90;
+  var maxLat = -90;
+  var minLon = Infinity;
+  var maxLon = -Infinity;
+
+  // Roll through the beacon's lat/lon pairs and take note.
+  for (var i = 0; i < beacon.lat.length; i++) {
+    var currentLat = beacon.lat[i];
+    var currentLon = beacon.lon[i];
+    if (lat === null && currentLat && currentLon) {
+      lat = currentLat;
+      lon = currentLon;
+    }
+    minLat = Math.min(minLat, currentLat);
+    minLat = Math.min(minLat, currentLat);
+  }
+
+  // If a non-missing lat/lon pair couldn't be found, that's an error.
+  if (!lat || !lon) {
+    throw Error('Beacon has no non-zero coordinates: ' + beacon.name);
+  }
+
+  var marker = new google.maps.Marker({
+    position: { lng: lon, lat: lat },
+    map: this.map,
+    title: beacon.name,
+    label: beacon.name,
+    visible: this.markerVisibility,
+  });
+
+  // Derived values from the beacon.
+  var startDate = new Date(beacon.start * 1000);
+
+  // When marker is clicked, update the Info Window content and show it.
+  marker.addListener('click', function() {
+    // This code makes heavy use of the d3 join/enter/update pattern.
+    // JOIN.
+    var content = this.infoContent.data([beacon]);
+
+    content.select('.name').text(beacon.name);
+    content.select('.start').text(startDate.toDateString());
+    content.select('.lat').text(lat.toFixed(3));
+    content.select('.lon').text(lon.toFixed(3));
+
+    this.infoWindow.open(this.map, marker);
+  }.bind(this));
+
+  return marker;
+};
+
+/**
+ * Show or hide beacon markers by setting their visibility.
+ *
+ * @param {boolean} visibility Whether to show (true) or hide (false) markers.
+ */
+geovelo.Map.prototype.setMarkerVisibility = function(visibility) {
+  this.markerVisibility = !!visibility;
+  if (!this.markers) {
+    return;
+  }
+  for (var i = 0; i < this.markers.length; i++) {
+    this.markers[i].setVisible(this.markerVisibility);
+  }
+  if (!this.markerVisibility) {
+    this.infoWindow.close();
+  }
 };
 
 /**

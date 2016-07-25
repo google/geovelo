@@ -31,6 +31,7 @@ geovelo = geovelo || {};
  *  - description - Opitonal string describing this folder or option.
  *  - defaultValue - The starting value to use for this setting.
  *  - min, max - The smallest and largest allowed values.
+ *  - type - Number (default) or color picker.
  */
 geovelo.settings = {
 
@@ -47,7 +48,7 @@ geovelo.settings = {
         defaultValue: 5.5,
         min: 1,
         max: 8,
-        step: 0.01
+        step: 0.01,
       },
       medianCorrection: {
         displayName: 'median correction',
@@ -55,9 +56,76 @@ geovelo.settings = {
             'How much of the cumulative median movement to subtract out.',
         defaultValue: 1,
         min: 0,
-        max: 1
-      }
-    }
-  }
+        max: 1,
+      },
+      showMarkers: {
+        displayName: 'show markers',
+        description: 'Whether to show a Google Maps marker for each beacon.',
+        defaultValue: false,
+      },
+    },
+  },
+
+  style: {
+    displayName: 'Style',
+    description: 'Settings for the style and behavior of the visualization.',
+    open: true,
+    options: {
+      startColor: {
+        displayName: 'start color',
+        description: 'Color to use for the start of the time range.',
+        defaultValue: '#0000ff',
+        type: 'color',
+      },
+      endColor: {
+        displayName: 'end color',
+        description: 'Color to use for the end of the time range.',
+        defaultValue: '#ff0000',
+        type: 'color',
+      },
+      lineWidth: {
+        displayName: 'line width',
+        description: 'Width of line when rendering.',
+        defaultValue: 1,
+        min: 1,
+        max: 10,
+        step: 0.1,
+      },
+    },
+  },
+
+  animation: {
+    displayName: 'Animation',
+    description: 'Settings for the looping animation of lines.',
+    open: true,
+    options: {
+      enabled: {
+        displayName: 'enabled',
+        description: 'Whether animation is enabled.',
+        defaultValue: false,
+      },
+      duration: {
+        displayName: 'duration (ms)',
+        description: 'How long the animation loop takes to complete.',
+        defaultValue: 4000,
+        min: 500,
+        max: 10000,
+        step: 500,
+      },
+      delay: {
+        displayName: 'delay (ms)',
+        description: 'How long to wait before restarting a finished loop.',
+        defaultValue: 1000,
+        min: 0,
+        max: 3000,
+        step: 100,
+      },
+      showStats: {
+        displayName: 'show FPS',
+        description: 'Whether to show the FPS stats meter.',
+        defaultValue: false,
+      },
+    },
+  },
 
 };

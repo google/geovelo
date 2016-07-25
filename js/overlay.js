@@ -34,6 +34,12 @@ geovelo = geovelo || {};
  */
 geovelo.Overlay = function(containerElement) {
 
+  // Local reference to the geovelo settings object, throw if missing.
+  var settings = geovelo.settings;
+  if (!settings) {
+    throw Error('geovelo.settings is missing!');
+  }
+
   // DOM Element into which to insert content.
   this.domElement = document.createElement('div');
   this.domElement.style.pointerEvents = 'none';
@@ -83,12 +89,18 @@ geovelo.Overlay = function(containerElement) {
     stats.domElement.style.position = 'absolute';
     stats.domElement.style.top = 0;
     stats.domElement.style.left = 0;
+    stats.domElement.style.display = 'none';
     this.domElement.appendChild(stats.domElement);
+  }
+
+  // Whether to show stats.
+  if (settings.animation.options.showStats.defaultValue) {
+    this.showStats();
   }
 
   // Set up the custom line shader material to use for drawing lines.
   this.material = new geovelo.LineShaderMaterial({
-    linewidth: 1
+    linewidth: settings.style.options.lineWidth.defaultValue
   });
 
   // Time in ms to allow processing to hold the thread before ceding to the UI.
@@ -99,6 +111,104 @@ geovelo.Overlay = function(containerElement) {
 
   // Time in ms to wait before invoking functions in need of debouncing.
   this.debounceTimeout = 50;
+
+  // Animation duration and delay.
+  this.animationDuration = settings.animation.options.duration.defaultValue;
+  this.animationDelay = settings.animation.options.delay.defaultValue;
+
+  // Whether we're currently animating.
+  this.animating = false;
+  if (settings.animation.options.enabled.defaultValue) {
+    this.startAnimation();
+  }
+};
+
+/**
+ * Start animating.
+ */
+geovelo.Overlay.prototype.startAnimation = function() {
+  this.animating = true;
+
+  // The start timestamp for the current animation loop.
+  var start = null;
+
+  var animate = (function() {
+    // Short-circuit if animation has been turned off.
+    if (!this.animating) {
+      return;
+    }
+
+    var now = Date.now();
+
+    if (start === null) {
+      start = now;
+    }
+
+    var startTimestamp = this.material.uniforms.startTimestamp.value;
+    var endTimestamp = this.material.uniforms.endTimestamp.value;
+    var diff = endTimestamp - startTimestamp;
+
+    // If there's any time between the start and end timestamps, set the
+    // end animation clamp and render the scene.
+    if (diff) {
+      this.material.uniforms.endAnimationClamp.value =
+          startTimestamp + diff * (now - start) / this.animationDuration;
+      this.render();
+    }
+
+    // If we've finished the loop, pause for the delay, otherwise queue up the
+    // next frame.
+    if (now > start + this.animationDuration) {
+      start = null;
+      setTimeout(animate, this.animationDelay);
+    } else {
+      requestAnimationFrame(animate);
+    }
+  }).bind(this);
+
+  // Kick off animation loop.
+  requestAnimationFrame(animate);
+};
+
+/**
+ * Stop animating.
+ */
+geovelo.Overlay.prototype.stopAnimation = function() {
+  this.animating = false;
+  this.material.uniforms.endAnimationClamp.value = Infinity;
+  this.queueRender();
+};
+
+/**
+ * Set animation duration.
+ */
+geovelo.Overlay.prototype.setAnimationDuration = function(duration) {
+  this.animationDuration = duration;
+};
+
+/**
+ * Set animation delay.
+ */
+geovelo.Overlay.prototype.setAnimationDelay = function(delay) {
+  this.animationDelay = delay;
+};
+
+/**
+ * Show the FPS stats display.
+ */
+geovelo.Overlay.prototype.showStats = function() {
+  if (this.stats) {
+    this.stats.domElement.style.display = null;
+  }
+};
+
+/**
+ * Hide the FPS stats display.
+ */
+geovelo.Overlay.prototype.hideStats = function() {
+  if (this.stats) {
+    this.stats.domElement.style.display = 'none';
+  }
 };
 
 /**
@@ -175,7 +285,7 @@ geovelo.Overlay.prototype.queueSetBounds = function(bounds) {
 
 /**
  * New beacon data is available. Preprocess the data and reconstruct the scene.
- * @param {Array} beacons An array of data for the beacons.
+ * @param {Array} rawBeacons An array of data for the beacons.
  */
 geovelo.Overlay.prototype.setData = function(rawBeacons) {
 
@@ -530,6 +640,38 @@ geovelo.Overlay.prototype.computeMedians = function(init) {
 
   this.emitStatusUpdate('ready', 1);
 
+};
+
+/**
+ * Set the color to use for the start of the range.
+ *
+ * @param {string} startColor The color to set for the start of the range.
+ */
+geovelo.Overlay.prototype.setStartColor = function(startColor) {
+  var color = d3.rgb(startColor);
+  this.material.uniforms.startColor.value
+      .set(color.r / 255, color.g / 255, color.b / 255, 1);
+  this.queueRender();
+};
+
+/**
+ * Set the color to use for the end of the range.
+ *
+ * @param {string} endColor The color to set for the end of the range.
+ */
+geovelo.Overlay.prototype.setEndColor = function(endColor) {
+  var color = d3.rgb(endColor);
+  this.material.uniforms.endColor.value
+      .set(color.r / 255, color.g / 255, color.b / 255, 1);
+  this.queueRender();
+};
+
+/**
+ * Set the line width.
+ */
+geovelo.Overlay.prototype.setLineWidth = function(lineWidth) {
+  this.material.linewidth = lineWidth;
+  this.queueRender();
 };
 
 /**

@@ -53,6 +53,12 @@ geovelo.TimeRange = function(containerElement) {
   // Date object representing the position of the right (end) nub.
   this.rangeEnd = null;
 
+  // String representing the color to fill the start nub.
+  this.startColor = null;
+
+  // String representing the color to fill the end nub.
+  this.endColor = null;
+
   // D3 scale for the time range. Will be updated on draw to match parameters.
   var timeScale = this.timeScale = d3.time.scale();
 
@@ -68,7 +74,7 @@ geovelo.TimeRange = function(containerElement) {
   this.dragBehavior = d3.behavior.drag()
       .origin(function (d) {
         return {
-          x: timeScale(d),
+          x: timeScale(d.time),
           y: geovelo.TimeRange.margin.top
         };
       })
@@ -104,6 +110,30 @@ geovelo.TimeRange = function(containerElement) {
       self.draw();
     }
   });
+};
+
+/**
+ * Set the color to use for the start of the range.
+ *
+ * @param {string} startColor The color to set for the start of the range.
+ */
+geovelo.TimeRange.prototype.setStartColor = function(startColor) {
+  this.startColor = startColor;
+  if (this.extentStart && this.extentEnd) {
+    this.drawNubs();
+  }
+};
+
+/**
+ * Set the color to use for the end of the range.
+ *
+ * @param {string} endColor The color to set for the end of the range.
+ */
+geovelo.TimeRange.prototype.setEndColor = function(endColor) {
+  this.endColor = endColor;
+  if (this.extentStart && this.extentEnd) {
+    this.drawNubs();
+  }
 };
 
 /**
@@ -274,7 +304,13 @@ geovelo.TimeRange.prototype.drawNubs = function() {
 
   // Get the draggable nub elements.
   var nubs = this.svg.selectAll('.nub')
-      .data([this.rangeStart, this.rangeEnd]);
+      .data([{
+        time: this.rangeStart,
+        color: this.startColor,
+      }, {
+        time: this.rangeEnd,
+        color: this.endColor,
+      }]);
 
   // Insert DOM elements for the nubs if this is the first time.
   nubs.enter().append('g')
@@ -284,12 +320,13 @@ geovelo.TimeRange.prototype.drawNubs = function() {
       .append('path')
         .attr('d', 'M -4,-16 v 8 l 4,6 l 4,-6 v -8 z');
 
-  // Move nubs into their correct positions.
+  // Move nubs into their correct positions and set color.
   var timeScale = this.timeScale;
   nubs.attr('transform', function(d) {
-    return 'translate(' + timeScale(d) + ',' +
+    return 'translate(' + timeScale(d.time) + ',' +
         geovelo.TimeRange.margin.top + ')';
-  });
+  }).select('.nub path')
+    .attr('fill', function(d) { return d.color; });
 };
 
 /**
