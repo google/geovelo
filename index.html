@@ -7,7 +7,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=RobotoDraft:400,500,700,400italic">
 <link rel="stylesheet" href="css/vis.css">
-<script src="https://maps.google.com/maps/api/js"></script>
+<script>
+/**
+ * The Geodetic Velocities visualization makes use of the Google Maps API to
+ * provide an interactive map for exploring the data. To use the Google Maps
+ * API, you need an API key.
+ *
+ * Instructions for getting a key can be found here:
+ * https://developers.google.com/maps/documentation/javascript/get-api-key#key
+ *
+ * Once you have your key, paste it into the variable below.
+ */
+var apiKey = '';
+
+document.write('<script src="https://maps.google.com/maps/api/js?key=' +
+    apiKey + '"></' + 'script>');
+</script>
 </head>
 <body>
 <script src="third_party/js/d3/d3-3.5.11.js"></script>
