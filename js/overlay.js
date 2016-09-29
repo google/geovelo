@@ -70,9 +70,9 @@ geovelo.Overlay = function(containerElement) {
   // Set up the THREE.js renderer.
   var renderer = this.renderer = new THREE.WebGLRenderer({
     alpha: true,
-    antialias: true
+    antialias: false
   });
-  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setPixelRatio(1);
   renderer.setSize(width, height);
   style = renderer.domElement.style;
   style.pointerEvents = 'none';
